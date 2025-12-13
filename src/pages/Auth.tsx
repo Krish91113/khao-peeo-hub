@@ -21,7 +21,7 @@ const Auth = () => {
   const [email, setEmail] = useState("");
   const [password, setPassword] = useState("");
   const [fullName, setFullName] = useState("");
-  const [role, setRole] = useState<"owner" | "admin">("admin");
+  const [role, setRole] = useState<"owner" | "admin" | "waiter">("admin");
   const [loading, setLoading] = useState(false);
   const navigate = useNavigate();
 
@@ -52,9 +52,17 @@ const Auth = () => {
         if (error) {
           if (error.message.includes("Invalid login credentials")) {
             toast.error("Invalid email or password");
+          } else if (error.message.includes("Email not confirmed") || error.message.includes("email_not_confirmed")) {
+            toast.error(
+              "Please confirm your email before signing in. " +
+              "Check your inbox and spam folder for the confirmation link. " +
+              "If you don't see it, you may need to disable email confirmation in Supabase Dashboard.",
+              { duration: 8000 }
+            );
           } else {
             toast.error(error.message);
           }
+          setLoading(false);
           return;
         }
 
@@ -68,8 +76,11 @@ const Auth = () => {
 
           toast.success("Signed in successfully!");
           
-          if (profile?.role === "owner") {
+          const userRole = profile?.role as string;
+          if (userRole === "owner") {
             navigate("/owner-dashboard");
+          } else if (userRole === "waiter") {
+            navigate("/waiter-dashboard");
           } else {
             navigate("/admin-dashboard");
           }
@@ -88,26 +99,69 @@ const Auth = () => {
         });
 
         if (error) {
-          if (error.message.includes("already registered")) {
+          console.error("Signup error:", error);
+          if (error.message.includes("already registered") || error.message.includes("already been registered")) {
             toast.error("This email is already registered. Please sign in instead.");
+          } else if (error.message.includes("fetch")) {
+            toast.error("Connection failed. Please check your internet connection and Supabase configuration.");
           } else {
-            toast.error(error.message);
+            toast.error(error.message || "Failed to create account. Please try again.");
           }
+          setLoading(false);
           return;
         }
 
         if (data.user) {
+          // Check if email confirmation is required
+          if (!data.session && data.user.email_confirmed_at === null) {
+            toast.info(
+              "Account created! Please check your email (including spam folder) to confirm your account before signing in. " +
+              "If you don't receive the email, you may need to disable email confirmation in Supabase Dashboard: " +
+              "Authentication → Providers → Email → Disable 'Enable email confirmations'",
+              { duration: 8000 }
+            );
+            setIsLogin(true); // Switch to login mode
+            setLoading(false);
+            return;
+          }
+
           toast.success("Account created successfully!");
           
-          if (role === "owner") {
-            navigate("/owner-dashboard");
+          // Wait a moment for the profile trigger to create the profile
+          await new Promise(resolve => setTimeout(resolve, 500));
+          
+          // If session exists (email confirmation disabled), auto-login
+          if (data.session) {
+            const { data: profile } = await supabase
+              .from("profiles")
+              .select("role")
+              .eq("id", data.user.id)
+              .single();
+
+            const userRole = profile?.role as string;
+            if (userRole === "owner") {
+              navigate("/owner-dashboard");
+            } else if (userRole === "waiter") {
+              navigate("/waiter-dashboard");
+            } else {
+              navigate("/admin-dashboard");
+            }
           } else {
-            navigate("/admin-dashboard");
+            // Email confirmation required
+            setIsLogin(true);
+            toast.info("Please confirm your email, then sign in.");
           }
+        } else {
+          toast.error("Account creation failed. Please try again.");
         }
       }
     } catch (error: any) {
-      toast.error(error.message || "An error occurred");
+      console.error("Auth error:", error);
+      if (error.message?.includes("fetch") || error.message?.includes("Network")) {
+        toast.error("Connection error. Please check:\n1. Your internet connection\n2. Supabase URL and key in .env file\n3. Browser console for details");
+      } else {
+        toast.error(error.message || "An error occurred. Please check the console for details.");
+      }
     } finally {
       setLoading(false);
     }
@@ -115,7 +169,7 @@ const Auth = () => {
 
   return (
     <div className="min-h-screen flex items-center justify-center bg-gradient-to-br from-background via-muted/30 to-background p-4">
-      <Card className="w-full max-w-md shadow-2xl">
+      <Card className="w-full max-w-md shadow-2xl animate-scale-in">
         <CardHeader className="space-y-4">
           <div className="flex justify-center">
             <div className="h-16 w-16 bg-gradient-to-br from-primary to-secondary rounded-2xl flex items-center justify-center">
@@ -173,7 +227,7 @@ const Auth = () => {
             {!isLogin && (
               <div className="space-y-3">
                 <Label>Select Your Role</Label>
-                <RadioGroup value={role} onValueChange={(value: "owner" | "admin") => setRole(value)}>
+                <RadioGroup value={role} onValueChange={(value: "owner" | "admin" | "waiter") => setRole(value)}>
                   <div className="flex items-center space-x-2 p-3 rounded-lg border hover:bg-muted/50 transition-colors cursor-pointer">
                     <RadioGroupItem value="owner" id="owner" />
                     <Label htmlFor="owner" className="flex-1 cursor-pointer">
@@ -185,7 +239,14 @@ const Auth = () => {
                     <RadioGroupItem value="admin" id="admin" />
                     <Label htmlFor="admin" className="flex-1 cursor-pointer">
                       <div className="font-semibold">Admin</div>
-                      <div className="text-xs text-muted-foreground">Manage tables, orders, and billing</div>
+                      <div className="text-xs text-muted-foreground">Manage tables, orders, and billing (POS)</div>
+                    </Label>
+                  </div>
+                  <div className="flex items-center space-x-2 p-3 rounded-lg border hover:bg-muted/50 transition-colors cursor-pointer">
+                    <RadioGroupItem value="waiter" id="waiter" />
+                    <Label htmlFor="waiter" className="flex-1 cursor-pointer">
+                      <div className="font-semibold">Waiter</div>
+                      <div className="text-xs text-muted-foreground">Monitor orders and serve customers</div>
                     </Label>
                   </div>
                 </RadioGroup>

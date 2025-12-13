@@ -10,9 +10,86 @@ interface BillDisplayProps {
 }
 
 const BillDisplay = ({ bill, onClose }: BillDisplayProps) => {
-  const handlePrint = () => {
-    window.print();
-    toast.success("Bill ready to print");
+  const handlePrintCustomer = () => {
+    // Print only customer receipt
+    const printContent = document.getElementById('customer-receipt');
+    if (!printContent) return;
+    
+    const printWindow = window.open('', '_blank');
+    if (!printWindow) return;
+    
+    printWindow.document.write(`
+      <html>
+        <head>
+          <title>Customer Receipt - Table ${bill.table.table_number}</title>
+          <style>
+            body { font-family: 'Satoshi', Arial, sans-serif; padding: 20px; max-width: 400px; margin: 0 auto; }
+            .header { text-align: center; margin-bottom: 20px; border-bottom: 2px solid #000; padding-bottom: 15px; }
+            .title { font-size: 32px; font-weight: 700; margin-bottom: 5px; letter-spacing: 1px; }
+            .subtitle { font-size: 11px; color: #666; text-transform: uppercase; letter-spacing: 1px; font-weight: 600; }
+            .info { display: flex; justify-content: space-between; padding: 15px; background: #f5f5f5; border-radius: 8px; margin-bottom: 20px; border: 1px solid #ddd; }
+            .items { margin-bottom: 20px; }
+            .item { display: flex; justify-content: space-between; padding: 10px 0; border-bottom: 1px dashed #ddd; }
+            .item-name { font-weight: 600; font-size: 14px; }
+            .item-details { font-size: 11px; color: #666; font-family: monospace; margin-top: 3px; }
+            .totals { margin-top: 20px; background: #f9f9f9; padding: 15px; border-radius: 8px; }
+            .total-row { display: flex; justify-content: space-between; padding: 5px 0; font-size: 13px; }
+            .total-final { font-size: 22px; font-weight: 700; margin-top: 10px; padding-top: 10px; border-top: 2px solid #000; }
+            .footer { text-align: center; margin-top: 30px; font-size: 12px; color: #666; font-weight: 500; }
+            @media print { body { margin: 0; } }
+          </style>
+        </head>
+        <body>
+          ${printContent.innerHTML}
+        </body>
+      </html>
+    `);
+    printWindow.document.close();
+    printWindow.focus();
+    setTimeout(() => {
+      printWindow.print();
+      printWindow.close();
+    }, 250);
+    toast.success("Customer receipt printed!");
+  };
+
+  const handlePrintKitchen = () => {
+    // Print only kitchen ticket
+    const printContent = document.getElementById('kitchen-ticket');
+    if (!printContent) return;
+    
+    const printWindow = window.open('', '_blank');
+    if (!printWindow) return;
+    
+    printWindow.document.write(`
+      <html>
+        <head>
+          <title>Kitchen Ticket - Table ${bill.table.table_number}</title>
+          <style>
+            body { font-family: 'Satoshi', Arial, sans-serif; padding: 20px; max-width: 400px; margin: 0 auto; }
+            .header { background: linear-gradient(135deg, #dc2626 0%, #ea580c 100%); color: white; padding: 20px; text-align: center; border-radius: 8px; margin-bottom: 20px; }
+            .header-title { font-size: 22px; font-weight: 700; letter-spacing: 1px; text-transform: uppercase; }
+            .table-info { text-align: center; margin-bottom: 20px; background: #f5f5f5; padding: 15px; border-radius: 8px; border: 1px solid #ddd; }
+            .table-number { font-size: 42px; font-weight: 700; }
+            .items { margin-top: 20px; }
+            .item { display: flex; justify-content: space-between; align-items: center; padding: 15px; background: #f9f9f9; border-radius: 8px; margin-bottom: 10px; border: 1px solid #e5e5e5; }
+            .item-name { font-weight: 600; font-size: 16px; }
+            .item-qty { font-size: 28px; font-weight: 700; color: #ea580c; background: #fff3e0; padding: 8px 16px; border-radius: 6px; }
+            @media print { body { margin: 0; } }
+          </style>
+        </head>
+        <body>
+          ${printContent.innerHTML}
+        </body>
+      </html>
+    `);
+    printWindow.document.close();
+    printWindow.focus();
+    setTimeout(() => {
+      printWindow.print();
+      printWindow.close();
+    }, 250);
+    toast.success("Kitchen ticket printed!");
   };
 
   const formatDate = (dateString: string) => {
@@ -23,94 +100,98 @@ const BillDisplay = ({ bill, onClose }: BillDisplayProps) => {
   };
 
   return (
-    <div className="max-w-2xl mx-auto space-y-6">
-      {/* Bill */}
-      <Card className="print:shadow-none">
-        <CardHeader className="text-center border-b">
-          <div className="space-y-2">
-            <CardTitle className="text-3xl font-bold">KHAO PEEO</CardTitle>
-            <p className="text-sm text-muted-foreground">Restaurant Management System</p>
-            <p className="text-xs text-muted-foreground">
-              Date: {formatDate(bill.created_at)}
+    <div className="max-w-4xl mx-auto space-y-6 animate-fade-in">
+      {/* Customer Receipt */}
+      <Card id="customer-receipt" className="print:shadow-none border-2">
+        <CardHeader className="text-center border-b-2 bg-gradient-to-r from-orange-50 to-red-50">
+          <div className="space-y-3">
+            <CardTitle className="text-4xl font-bold tracking-tight">KHAO PEEO</CardTitle>
+            <div className="h-px bg-gradient-to-r from-transparent via-primary to-transparent"></div>
+            <p className="text-sm font-semibold text-muted-foreground uppercase tracking-wider">Customer Receipt</p>
+            <p className="text-xs text-muted-foreground font-mono">
+              {formatDate(bill.created_at)}
             </p>
           </div>
         </CardHeader>
         <CardContent className="space-y-6 pt-6">
           {/* Table Info */}
-          <div className="flex justify-between items-center p-4 bg-muted/50 rounded-lg">
+          <div className="flex justify-between items-center p-5 bg-gradient-to-r from-muted/30 to-muted/50 rounded-lg border">
             <div>
-              <p className="text-sm text-muted-foreground">Table Number</p>
-              <p className="text-2xl font-bold">Table {bill.table.table_number}</p>
+              <p className="text-xs font-semibold text-muted-foreground uppercase tracking-wide mb-1">Table Number</p>
+              <p className="text-3xl font-bold">#{bill.table.table_number}</p>
             </div>
             <div className="text-right">
-              <p className="text-sm text-muted-foreground">Bill No</p>
-              <p className="text-lg font-mono">{bill.id.slice(0, 8).toUpperCase()}</p>
+              <p className="text-xs font-semibold text-muted-foreground uppercase tracking-wide mb-1">Bill Number</p>
+              <p className="text-lg font-mono font-bold">{bill.id.slice(0, 8).toUpperCase()}</p>
             </div>
           </div>
 
           {/* Items */}
-          <div className="space-y-3">
-            <h3 className="font-semibold text-lg">Order Items</h3>
-            <div className="space-y-2">
+          <div className="space-y-4">
+            <h3 className="font-bold text-lg uppercase tracking-wide border-b pb-2">Order Items</h3>
+            <div className="space-y-3">
               {bill.items.map((item: any, index: number) => (
-                <div key={index} className="flex justify-between py-2 border-b">
+                <div key={index} className="flex justify-between items-center py-3 border-b border-dashed">
                   <div className="flex-1">
-                    <p className="font-medium">{item.name}</p>
-                    <p className="text-sm text-muted-foreground">
-                      ₹{item.price} × {item.quantity}
+                    <p className="font-semibold text-base">{item.name}</p>
+                    <p className="text-xs text-muted-foreground font-mono mt-1">
+                      ₹{item.price.toFixed(2)} × {item.quantity}
                     </p>
                   </div>
-                  <p className="font-semibold">₹{(item.price * item.quantity).toFixed(2)}</p>
+                  <p className="font-bold text-lg">₹{(item.price * item.quantity).toFixed(2)}</p>
                 </div>
               ))}
             </div>
           </div>
 
-          <Separator />
+          <Separator className="my-4" />
 
           {/* Totals */}
-          <div className="space-y-2">
-            <div className="flex justify-between">
-              <span>Subtotal:</span>
-              <span>₹{parseFloat(bill.subtotal).toFixed(2)}</span>
+          <div className="space-y-3 bg-muted/30 p-4 rounded-lg">
+            <div className="flex justify-between text-sm">
+              <span className="font-medium">Subtotal:</span>
+              <span className="font-semibold">₹{parseFloat(bill.subtotal).toFixed(2)}</span>
             </div>
-            <div className="flex justify-between">
-              <span>Tax (5%):</span>
-              <span>₹{parseFloat(bill.tax).toFixed(2)}</span>
+            <div className="flex justify-between text-sm">
+              <span className="font-medium">Tax (5%):</span>
+              <span className="font-semibold">₹{parseFloat(bill.tax).toFixed(2)}</span>
             </div>
             <Separator />
-            <div className="flex justify-between text-xl font-bold">
+            <div className="flex justify-between text-xl font-bold pt-2">
               <span>Total Amount:</span>
-              <span className="text-primary">₹{parseFloat(bill.total_amount).toFixed(2)}</span>
+              <span className="text-primary text-2xl">₹{parseFloat(bill.total_amount).toFixed(2)}</span>
             </div>
           </div>
 
-          <Separator />
+          <Separator className="my-4" />
 
           {/* Footer */}
-          <div className="text-center text-sm text-muted-foreground">
-            <p>Thank you for dining with us!</p>
-            <p>Visit again soon</p>
+          <div className="text-center space-y-2 py-4">
+            <p className="text-sm font-semibold">Thank you for dining with us!</p>
+            <p className="text-xs text-muted-foreground">We hope to serve you again soon</p>
+            <div className="h-px bg-gradient-to-r from-transparent via-muted-foreground/20 to-transparent mt-4"></div>
           </div>
         </CardContent>
       </Card>
 
       {/* Kitchen Ticket */}
-      <Card className="print:shadow-none">
-        <CardHeader className="bg-secondary text-secondary-foreground">
-          <CardTitle className="text-center">KITCHEN TICKET</CardTitle>
+      <Card id="kitchen-ticket" className="print:shadow-none border-2 border-secondary/20">
+        <CardHeader className="bg-gradient-to-r from-secondary to-secondary/80 text-secondary-foreground">
+          <CardTitle className="text-center text-2xl font-bold tracking-wide">KITCHEN TICKET</CardTitle>
         </CardHeader>
-        <CardContent className="space-y-4 pt-6">
-          <div className="text-center space-y-2">
-            <p className="text-3xl font-bold">Table {bill.table.table_number}</p>
-            <p className="text-sm text-muted-foreground">{formatDate(bill.created_at)}</p>
+        <CardContent className="space-y-5 pt-6">
+          <div className="text-center space-y-2 bg-muted/50 p-4 rounded-lg border">
+            <p className="text-5xl font-bold">TABLE {bill.table.table_number}</p>
+            <p className="text-sm font-mono text-muted-foreground">{formatDate(bill.created_at)}</p>
+            <p className="text-xs font-mono text-muted-foreground">Order ID: {bill.order_id?.slice(0, 8).toUpperCase()}</p>
           </div>
           <Separator />
           <div className="space-y-3">
+            <h3 className="font-bold text-sm uppercase tracking-wide text-muted-foreground">Items Required:</h3>
             {bill.items.map((item: any, index: number) => (
-              <div key={index} className="flex justify-between items-center p-3 bg-muted rounded-lg">
+              <div key={index} className="flex justify-between items-center p-4 bg-gradient-to-r from-muted/50 to-muted/30 rounded-lg border border-primary/10">
                 <span className="font-bold text-lg">{item.name}</span>
-                <span className="text-2xl font-bold text-primary">× {item.quantity}</span>
+                <span className="text-3xl font-bold text-primary bg-primary/10 px-4 py-2 rounded">× {item.quantity}</span>
               </div>
             ))}
           </div>
@@ -119,9 +200,13 @@ const BillDisplay = ({ bill, onClose }: BillDisplayProps) => {
 
       {/* Actions */}
       <div className="flex gap-4 print:hidden">
-        <Button onClick={handlePrint} className="flex-1" variant="outline">
+        <Button onClick={handlePrintCustomer} className="flex-1" variant="outline">
           <Printer className="h-4 w-4 mr-2" />
-          Print
+          Print Customer Receipt
+        </Button>
+        <Button onClick={handlePrintKitchen} className="flex-1" variant="outline">
+          <Printer className="h-4 w-4 mr-2" />
+          Print Kitchen Ticket
         </Button>
         <Button onClick={onClose} className="flex-1">
           <CheckCircle className="h-4 w-4 mr-2" />

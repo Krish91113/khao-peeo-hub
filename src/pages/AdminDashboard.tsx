@@ -72,18 +72,28 @@ const AdminDashboard = () => {
 
       {/* Main Content */}
       <div className="container mx-auto px-4 py-8">
-        <div className="mb-8">
-          <h2 className="text-3xl font-bold mb-2">Restaurant Management</h2>
-          <p className="text-muted-foreground">Manage tables, orders, and billing</p>
+        <div className="mb-8 animate-fade-in-up">
+          <h2 className="text-3xl font-bold mb-2">Restaurant Management (POS)</h2>
+          <p className="text-muted-foreground">Stage 1: POS for manual order entry - Manage tables, orders, and billing</p>
         </div>
 
         {!showOrderEntry ? (
-          <TableManagement onTableSelect={handleTableSelect} />
+          <div className="animate-fade-in">
+            <TableManagement 
+              onTableSelect={handleTableSelect}
+              onResetTable={(tableId) => {
+                // Refresh tables when a table is reset
+                if (selectedTable?.id === tableId) {
+                  setSelectedTable(null);
+                }
+              }}
+            />
+          </div>
         ) : (
-          <div>
+          <div className="animate-fade-in">
             <Button
               variant="outline"
-              className="mb-4"
+              className="mb-4 hover:bg-muted transition-all duration-300"
               onClick={() => {
                 setShowOrderEntry(false);
                 setSelectedTable(null);
